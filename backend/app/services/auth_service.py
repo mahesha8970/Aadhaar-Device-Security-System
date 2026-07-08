@@ -1,6 +1,6 @@
 from app.config.database import users_collection
-from app.config.security import hash_password
-from app.schemas.user import UserRegister
+from app.config.security import hash_password, verify_password, create_access_token
+from app.schemas.user import UserRegister, UserLogin
 
 
 class AuthService:
@@ -35,4 +35,40 @@ class AuthService:
         return {
             "success": True,
             "message": "Registration Successful"
+        }
+
+    @staticmethod
+    async def login_user(user: UserLogin):
+
+        # Find user by email
+        existing_user = await users_collection.find_one(
+            {"email": user.email}
+        )
+
+        if not existing_user:
+            return {
+                "success": False,
+                "message": "User not found"
+            }
+
+        # Verify password
+        if not verify_password(
+            user.password,
+            existing_user["password"]
+        ):
+            return {
+                "success": False,
+                "message": "Invalid password"
+            }
+
+        # Generate JWT Token
+        token = create_access_token(
+            {"sub": existing_user["email"]}
+        )
+
+        return {
+            "success": True,
+            "message": "Login Successful",
+            "access_token": token,
+            "token_type": "bearer"
         }
